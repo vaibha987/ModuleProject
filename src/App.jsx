@@ -1,75 +1,80 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios"
 
-const App = () => {
-  const [coins, setCoins] = useState([]);
-  const [search, setSearch] = useState("");
-  const [sortOrder, setSortOrder] = useState("asc");
+function App() {
+  const [cryptoData, setCryptoData] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filteredData, setFilteredData] = useState([]);
 
-  const API_URL =
-    "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=10&page=1&sparkline=false";
-
-  // Fetch using .then
-  const fetchDataUsingThen = () => {
-    axios.get(API_URL).then((response) => {
-      setCoins(response.data);
-    });
+  // Fetch data using .then
+  const fetchDataWithThen = () => {
+    fetch(
+      "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=10&page=1&sparkline=false"
+    )
+      .then((response) => response.json())
+      .then((data) => {
+        setCryptoData(data);
+        setFilteredData(data);
+      })
+      .catch((error) => console.error("Error fetching data with .then:", error));
   };
 
-  // Fetch using async/await
-  const fetchDataUsingAsyncAwait = async () => {
+  // Fetch data using async/await
+  const fetchDataWithAsync = async () => {
     try {
-      const response = await axios.get(API_URL);
-      setCoins(response.data);
+      const response = await fetch(
+        "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=10&page=1&sparkline=false"
+      );
+      const data = await response.json();
+      setCryptoData(data);
+      setFilteredData(data);
     } catch (error) {
-      console.error("Error fetching data:", error);
+      console.error("Error fetching data with async/await:", error);
     }
   };
 
+  // Handle search functionality
+  const handleSearch = () => {
+    const filtered = cryptoData.filter((item) =>
+      item.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    setFilteredData(filtered);
+  };
+
+  // Sort by market cap
+  const sortByMarketCap = () => {
+    const sorted = [...filteredData].sort((a, b) => b.market_cap - a.market_cap);
+    setFilteredData(sorted);
+  };
+
+  // Sort by percentage change (24h)
+  const sortByChange = () => {
+    const sorted = [...filteredData].sort(
+      (a, b) => b.price_change_percentage_24h - a.price_change_percentage_24h
+    );
+    setFilteredData(sorted);
+  };
+
+  // Fetch data on component mount
   useEffect(() => {
-    fetchDataUsingAsyncAwait(); // Default fetch
+    fetchDataWithAsync(); // Change to fetchDataWithThen() to test .then
   }, []);
 
-  // Filter based on search
-  const handleSearch = () => {
-    if (!search) {
-      fetchDataUsingAsyncAwait(); // Reset
-    } else {
-      const filteredCoins = coins.filter((coin) =>
-        coin.name.toLowerCase().includes(search.toLowerCase())
-      );
-      setCoins(filteredCoins);
-    }
-  };
-
-  // Sort by Market Cap
-  const handleSort = (key) => {
-    const sortedCoins = [...coins].sort((a, b) => {
-      return sortOrder === "asc"
-        ? a[key] - b[key]
-        : b[key] - a[key];
-    });
-    setCoins(sortedCoins);
-    setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-  };
-
   return (
-    <div>
-      <h1>Cryptocurrency Market</h1>
-      <div>
+    <div style={{ padding: "20px" }}>
+      <h1>Crypto Market Data</h1>
+      <div style={{ marginBottom: "20px" }}>
         <input
           type="text"
-          placeholder="Search by name"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search by name..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
         />
         <button onClick={handleSearch}>Search</button>
-        <button onClick={() => handleSort("market_cap")}>Sort by Market Cap</button>
-        <button onClick={() => handleSort("price_change_percentage_24h")}>
-          Sort by Percentage Change
-        </button>
+        <button onClick={sortByMarketCap}>Sort by Market Cap</button>
+        <button onClick={sortByChange}>Sort by % Change</button>
       </div>
-      <table border="1">
+
+      <table border="1" cellPadding="10" style={{ width: "100%", textAlign: "left" }}>
         <thead>
           <tr>
             <th>Image</th>
@@ -80,21 +85,21 @@ const App = () => {
           </tr>
         </thead>
         <tbody>
-          {coins.map((coin) => (
-            <tr key={coin.id}>
+          {filteredData.map((item) => (
+            <tr key={item.id}>
               <td>
-                <img src={coin.image} alt={coin.name} width="50" />
+                <img src={item.image} alt={item.name} width="30" />
               </td>
-              <td>{coin.name}</td>
-              <td>{coin.symbol.toUpperCase()}</td>
-              <td>${coin.current_price.toLocaleString()}</td>
-              <td>{coin.total_volume.toLocaleString()}</td>
+              <td>{item.name}</td>
+              <td>{item.symbol.toUpperCase()}</td>
+              <td>${item.current_price.toLocaleString()}</td>
+              <td>{item.total_volume.toLocaleString()}</td>
             </tr>
           ))}
         </tbody>
       </table>
     </div>
   );
-};
+}
 
 export default App;
